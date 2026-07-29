@@ -1,0 +1,24 @@
+title: Obfuscated PowerShell Execution Bypass
+id: 5f1b1b1a-2b3c-4d5e-6f7a-8b9c0d1e2f3a
+status: test
+description: Detects execution of PowerShell with execution policy bypass and hidden window style.
+references:
+    - https://attack.mitre.org/techniques/T1059/001/
+author: PoeticLinee
+date: 2026/07/29
+tags:
+    - attack.t1059.001
+    - attack.execution
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: '\powershell.exe'
+        CommandLine|contains:
+            - '-ExecutionPolicy Bypass'
+            - '-WindowStyle Hidden'
+    condition: selection
+falsepositives:
+    - Administrative scripts
+level: high

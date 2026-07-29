@@ -1,0 +1,2 @@
+index=main source="*Sysmon*" "ExecutionPolicy" 
+| table _time, CommandLine, Image

@@ -27,8 +27,8 @@
 │           Isolated Host-Only Network (192.168.56.0/24)│
 │                                                       │
 │  ┌────────────────────┐         ┌───────────────────┐ │
-│  │  Windows 10 Host   │         │  Ubuntu Server    │ │
-│  │  192.168.56.102    │──9997─▶│  Splunk Enterprise │ │
+│  │  Windows 10 Host   │  [PORT:]       │  Ubuntu Server    │ │
+│  │  192.168.56.102    │──9997─▶│  Splunk Enterprise│ │
 │  │  Sysmon + UF       │         │  192.168.56.101   │ │
 │  └────────────────────┘         │  :8000 (mgmt)     │ │
 │                                 │  :9997 (ingest)   │ │

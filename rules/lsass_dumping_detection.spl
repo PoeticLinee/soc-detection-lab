@@ -1,0 +1,2 @@
+index=main source="*Sysmon*" (CommandLine="*lsass*" OR CommandLine="*xordump*" OR CommandLine="*rdrleakdiag*")
+| table _time host EventCode SourceImage TargetImage CommandLine

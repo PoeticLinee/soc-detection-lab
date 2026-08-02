@@ -1,0 +1,1 @@
+index=main source="WinEventLog:Microsoft-Windows-Sysmon/Operational" EventCode=1 "net user" | table _time , CommandLine, Image

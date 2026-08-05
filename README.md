@@ -65,9 +65,9 @@ soc-detection-lab/
 - ✅ **Phase 3 — Telemetry Ingestion**
   Deployed Splunk Universal Forwarder, configured `inputs.conf` to forward Application/Security/System/Sysmon logs. Validated pipeline end-to-end in Splunk (`index=main`).
 
-- 🔄 **Phase 4 — Threat Simulation** *(in progress — 3 techniques simulated so far)*
+- 🔄 **Phase 4 — Threat Simulation** *(in progress — 4 techniques simulated so far)*
 
-- 🔄 **Phase 5 — Detection Engineering** *(in progress — 3 custom alerts so far)*
+- 🔄 **Phase 5 — Detection Engineering** *(in progress — 4 custom alerts so far)*
 
 - ⏳ **Phase 6 — Dashboards & Screenshots** *(planned)*
 
@@ -105,6 +105,17 @@ Used Atomic Red Team to simulate an attacker creating a new local account for pe
 ```powershell
 Invoke-AtomicTest T1136.001 -GetPrereqs
 Invoke-AtomicTest T1136.001
+```
+
+---
+
+**Technique simulated:** T1560.001 — Archive Collected Data: Archive via Utility
+
+Used Atomic Red Team to simulate an attacker staging and compressing collected data using common archive utilities (7-Zip, WinRAR, WinZip, makecab) before exfiltration:
+
+```powershell
+Invoke-AtomicTest T1560.001 -GetPrereqs
+Invoke-AtomicTest T1560.001
 ```
 
 ---
@@ -147,11 +158,19 @@ index=main source="*Sysmon*" EventCode=1 (CommandLine="*net user*" OR CommandLin
 | table _time host EventCode Image CommandLine User
 ```
 
+**Threat hunting query — archive utility usage for data staging (SPL):**
+
+```spl
+index=main sourcetype="WinEventLog:Microsoft-Windows-Sysmon/Operational" EventCode=1 (CommandLine="*zip*" OR CommandLine="*7z*" OR CommandLine="*rar*" OR CommandLine="*makecab*")
+| table _time, Image, CommandLine
+```
+
 | Rule | Technique | Trigger | Severity | Action |
 |---|---|---|---|---|
-| Suspicious Obfuscated PowerShell Execution | T1059.001 | `Number of Results > 0` | High  | Dashboard notification + event tagging |
+| Suspicious Obfuscated PowerShell Execution | T1059.001 | `Number of Results > 0` | High / Critical | Dashboard notification + event tagging |
 | Suspicious LSASS Memory Access | T1003.001 | `Number of Results > 0` | Critical | Dashboard notification + event tagging |
 | Suspicious Local Account / Group Manipulation | T1136.001 | `Number of Results > 0` | High | Dashboard notification + event tagging |
+| Suspicious Archive Utility Usage (Data Staging) | T1560.001 | `Number of Results > 0` | Medium | Dashboard notification + event tagging |
 
 ---
 
@@ -161,6 +180,7 @@ index=main source="*Sysmon*" EventCode=1 (CommandLine="*net user*" OR CommandLin
 - Matching on both `-ExecutionPolicy Bypass` and `-WindowStyle Hidden` narrows results to genuinely suspicious PowerShell invocations rather than all PowerShell activity.
 - LSASS credential dumping doesn't always show up as a clean process name — tools like `xordump` or `rdrleakdiag` are used to evade signature-based detection, so hunting on process access patterns (Sysmon EventCode 10, `TargetImage=lsass.exe`) is more resilient than blocking by filename alone.
 - Local account creation via `net user` is a fast, low-noise way for an attacker to establish persistence — pairing the command-line string with `localgroup` catches both the account creation and the follow-up privilege escalation (adding the new account to an admin group).
+- Data staging via archive utilities (7-Zip, WinRAR, WinZip, makecab) is a common precursor to exfiltration — because attackers can use any of several tools for the same goal, the detection needs to match on the *behavior* (compressing files into an archive) across multiple binaries rather than a single process name.
 - *(More findings will be added as more techniques are tested.)*
 
 ---
@@ -169,6 +189,7 @@ index=main source="*Sysmon*" EventCode=1 (CommandLine="*net user*" OR CommandLin
 
 - [x] Simulate a credential access technique (T1003.001)
 - [x] Simulate a persistence technique (T1136.001)
+- [x] Simulate a collection technique (T1560.001)
 - [ ] Simulate additional MITRE ATT&CK techniques (lateral movement, defense evasion, privilege escalation)
 - [ ] Write 5–10 custom detection rules covering multiple tactics
 - [ ] Build a Splunk dashboard for alert overview / MITRE coverage

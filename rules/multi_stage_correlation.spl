@@ -1,0 +1,21 @@
+index=main source="*Sysmon*" 
+| eval attack_stage=case(
+match(CommandLine, "(?i)-ExecutionPolicy Bypass|-WindowStyle Hidden"), "1. Execution(T1059.001)",
+(match(CommandLine, "(?i)xordump|rdrleakdiag") OR (match(TargetImage,"(?i)lsass") AND EventCode=10)),
+"2. Credential Access (T1003.001)",
+match(CommandLine,"(?i)net user|localgroup"),"3. Persistence (T1136.001)",
+match(CommandLine,"(?i)zip|7z|rar|makecab"),"4. Collection(T1560.001)",
+match(Image, "(?i)curl\.exe|powershell\.exe") AND match(CommandLine, "(?i)reqres|http"), "5. Exfiltration(T1567)"
+)
+| where isnotnull(attack_stage)
+| stats 
+    dc(attack_stage) as stages_count,
+    values(attack_stage) as stages_detected,
+    min(_time) as first_seen,
+    max(_time) as last_seen,
+    values(CommandLine) as executed_commands
+    by host, User
+| where stages_count>=3
+| eval attack_duration_sec=last_seen-first_seen
+| convert ctime(first_seen) ctime(last_seen)
+| table host,User, stages_count, stages_detected, attack_duration_sec, first_seen, last_seen, executed_commands

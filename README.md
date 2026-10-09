@@ -72,7 +72,7 @@ soc-detection-lab/
 
 - 🔄 **Phase 4 — Threat Simulation** *(in progress — 5 techniques simulated so far)*
 
-- 🔄 **Phase 5 — Detection Engineering** *(in progress — 5 custom alerts so far)*
+- 🔄 **Phase 5 — Detection Engineering** *(in progress — 5 custom alerts + 1 multi-stage correlation search so far)*
 
 - ⏳ **Phase 6 — Dashboards & Screenshots** *(planned)*
 
@@ -199,6 +199,51 @@ index=main source="WinEventLog:Microsoft-Windows-Sysmon/Operational" (EventCode=
 
 ---
 
+## 🔗 Multi-Stage Attack Correlation
+
+Instead of relying on five isolated alerts, this correlation search ties the individual techniques together into a single detection: it tags every matching event with the attack stage it represents, then groups by host and user to flag any host that has shown **3 or more distinct stages of the attack chain** within the search window — a much stronger signal of an active, in-progress intrusion than any single alert firing on its own.
+
+**Correlation search — multi-stage attack chain detection (SPL):**
+
+```spl
+index=main source="*Sysmon*" 
+| eval attack_stage=case(
+match(CommandLine, "(?i)-ExecutionPolicy Bypass|-WindowStyle Hidden"), "1. Execution(T1059.001)",
+(match(CommandLine, "(?i)xordump|rdrleakdiag") OR (match(TargetImage,"(?i)lsass") AND EventCode=10)),
+"2. Credential Access (T1003.001)",
+match(CommandLine,"(?i)net user|localgroup"),"3. Persistence (T1136.001)",
+match(CommandLine,"(?i)zip|7z|rar|makecab"),"4. Collection(T1560.001)",
+match(Image, "(?i)curl\.exe|powershell\.exe") AND match(CommandLine, "(?i)reqres|http"), "5. Exfiltration(T1567)"
+)
+| where isnotnull(attack_stage)
+| stats 
+    dc(attack_stage) as stages_count,
+    values(attack_stage) as stages_detected,
+    min(_time) as first_seen,
+    max(_time) as last_seen,
+    values(CommandLine) as executed_commands
+    by host, User
+| where stages_count>=3
+| eval attack_duration_sec=last_seen-first_seen
+| convert ctime(first_seen) ctime(last_seen)
+| table host,User, stages_count, stages_detected, attack_duration_sec, first_seen, last_seen, executed_commands
+```
+
+| Rule | Technique(s) Covered | Trigger | Severity | Action |
+|---|---|---|---|---|
+| Multi-Stage Attack Chain Detected | T1059.001, T1003.001, T1136.001, T1560.001, T1567 | `stages_count >= 3` for the same host/user | Critical | Immediate dashboard notification + incident escalation |
+
+---
+
+## 🗺️ MITRE ATT&CK Navigator Heatmap
+
+*(Coming soon — a visual heatmap of all techniques simulated and detected in this lab, generated with the [MITRE ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/).)*
+
+<!-- Once generated, embed the exported SVG/PNG here, e.g.: -->
+<!-- ![MITRE ATT&CK Navigator Heatmap](docs/attack-navigator-heatmap.svg) -->
+
+---
+
 ## 🔑 Key Technical Findings
 
 - Splunk's `index=main` retains forwarded events even if an attacker later tries to clear local Windows logs — centralized logging beats local tampering.
@@ -207,6 +252,7 @@ index=main source="WinEventLog:Microsoft-Windows-Sysmon/Operational" (EventCode=
 - Local account creation via `net user` is a fast, low-noise way for an attacker to establish persistence — pairing the command-line string with `localgroup` catches both the account creation and the follow-up privilege escalation (adding the new account to an admin group).
 - Data staging via archive utilities (7-Zip, WinRAR, WinZip, makecab) is a common precursor to exfiltration — because attackers can use any of several tools for the same goal, the detection needs to match on the *behavior* (compressing files into an archive) across multiple binaries rather than a single process name.
 - Exfiltrating over a legitimate public web API (rather than attacker-owned infrastructure) is a realistic evasion technique — the traffic looks like normal HTTPS to an API endpoint, so detection has to rely on process-level context (an unusual process like `curl.exe` making an outbound connection, carrying a local file as form data) rather than domain reputation alone.
+- A single alert can be a false positive, but a correlation search tying `eval`-tagged attack stages to `stats ... by host, User` turns isolated low/medium-confidence signals into a high-confidence, prioritized detection — this is the same escalation logic a SOC analyst uses when triaging multiple related alerts into one incident.
 - *(More findings will be added as more techniques are tested.)*
 
 ---
@@ -217,7 +263,7 @@ index=main source="WinEventLog:Microsoft-Windows-Sysmon/Operational" (EventCode=
 - [x] Simulate a persistence technique (T1136.001)
 - [x] Simulate a collection technique (T1560.001)
 - [x] Simulate an exfiltration technique (T1567) — completes a full attack chain
-- [ ] Build a correlation rule that fires when multiple attack-chain stages occur on the same host in a short window
+- [x] Build a correlation rule that fires when multiple attack-chain stages occur on the same host in a short window
 - [ ] Simulate additional MITRE ATT&CK techniques (lateral movement, defense evasion, privilege escalation)
 - [ ] Write 5–10 custom detection rules covering multiple tactics
 - [ ] Generate a MITRE ATT&CK Navigator heatmap of techniques covered

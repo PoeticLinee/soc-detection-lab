@@ -22,18 +22,23 @@
 
 ## 📐 Architecture & Topology
 
-```
-┌──────────────────────────────────────────────────────┐
-│           Isolated Host-Only Network (192.168.56.0/24)│
-│                                                       │
-│  ┌────────────────────┐         ┌───────────────────┐ │
-│  │  Windows 10 Host   │         │  Ubuntu Server    │ │
-│  │  192.168.56.102    │──9997─▶│  Splunk Enterprise│ │
-│  │  Sysmon + UF       │         │  192.168.56.101   │ │
-│  └────────────────────┘         │  :8000 (mgmt)     │ │
-│                                 │  :9997 (ingest)   │ │
-│                                 └───────────────────┘ │
-└──────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph Lab ["Isolated Host-Only Network (192.168.56.0/24)"]
+        direction LR
+        WIN["💻 <b>Windows 10 Target</b><br/>IP: 192.168.56.102<br/>Sysmon + Universal Forwarder"]
+        SPLUNK["⚙️ <b>Ubuntu Server</b><br/>IP: 192.168.56.101<br/>Splunk Enterprise<br/><i>:8000 (UI) | :9997 (Ingest)</i>"]
+        
+        WIN -- "Log Forwarding<br/>(TCP/9997)" --> SPLUNK
+    end
+
+    INET(("🌐 Internet"))
+    WIN -. "NAT Adapter<br/>(Atomic RT / Tooling)" .-> INET
+    SPLUNK -. "NAT Adapter<br/>(Updates)" .-> INET
+
+    style WIN fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#fff
+    style SPLUNK fill:#1e293b,stroke:#10b981,stroke-width:2px,color:#fff
+    style INET fill:#0f172a,stroke:#64748b,stroke-width:1px,color:#fff
 ```
 
 - **Adapter 1:** Host-Only network — isolated lab communication

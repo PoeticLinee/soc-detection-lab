@@ -1,0 +1,2 @@
+index=main source="WinEventLog:Microsoft-Windows-Sysmon/Operational" (EventCode=1 OR EventCode=3) (Image="*curl.exe" OR Image="*powershell.exe") 
+| table _time, host, EventCode, Image, CommandLine, DestinationIp, DestinationPort

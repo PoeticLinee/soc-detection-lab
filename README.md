@@ -239,7 +239,7 @@ match(Image, "(?i)curl\.exe|powershell\.exe") AND match(CommandLine, "(?i)reqres
 
 Visual heatmap of all techniques simulated and detected in this lab, generated with the [MITRE ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/)
 
-![MITRE ATT&CK Heatmap](docs/assets/mitre_coverage.svg)
+![MITRE ATT&CK Heatmap](docs/assets/mitre_coverage_1.svg)
 
 > 🔗 **Interactive Layer:** You can inspect the full JSON layer file in [`rules/att&ck_layer.json`](rules/att&ck_layer.json).
 

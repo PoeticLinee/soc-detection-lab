@@ -53,6 +53,8 @@ soc-detection-lab/
 ├── README.md
 ├── docs/
 │   └── assets/     # screenshots & MITRE Navigator heatmap (evidence)
+├── incident-reports/
+│   └── IR-001-multi-stage-attack-chain.md
 ├── rules/          # SPL detection rules / Sigma rules / ATT&CK layer JSON
 ├── samples/        # sample logs, sample malicious command lines
 └── scripts/        # setup / config scripts (inputs.conf, sysmonconfig.xml, etc.)
@@ -80,7 +82,8 @@ soc-detection-lab/
 - ✅ **Phase 6 — Dashboards & Screenshots**
   Real evidence captured for every detection: live Splunk searches, alert configuration, and correlation search results — see inline screenshots below.
 
-- ⏳ **Phase 7 — Incident Reports** *(planned)*
+- ✅ **Phase 7 — Incident Reports**
+  Full incident report written for the multi-stage attack chain, modeled on real SOC analyst documentation standards — see [`incident-reports/IR-001-multi-stage-attack-chain.md`](incident-reports/IR-001-multi-stage-attack-chain.md).
 
 ---
 
@@ -225,7 +228,7 @@ index=main source="WinEventLog:Microsoft-Windows-Sysmon/Operational" (EventCode=
 
 | Rule | Technique | Trigger | Severity | Action |
 |---|---|---|---|---|
-| Suspicious Obfuscated PowerShell Execution | T1059.001 | `Number of Results > 0` | High  | Dashboard notification + event tagging |
+| Suspicious Obfuscated PowerShell Execution | T1059.001 | `Number of Results > 0` | High | Dashboard notification + event tagging |
 | Suspicious LSASS Memory Access | T1003.001 | `Number of Results > 0` | Critical | Dashboard notification + event tagging |
 | Suspicious Local Account / Group Manipulation | T1136.001 | `Number of Results > 0` | High | Dashboard notification + event tagging |
 | Suspicious Archive Utility Usage (Data Staging) | T1560.001 | `Number of Results > 0` | Medium | Dashboard notification + event tagging |
@@ -273,6 +276,8 @@ match(Image, "(?i)curl\.exe|powershell\.exe") AND match(CommandLine, "(?i)reqres
 |---|---|---|---|---|
 | Multi-Stage Attack Chain Detected | T1059.001, T1003.001, T1136.001, T1560.001, T1567 | `stages_count >= 3` for the same host/user | Critical | Immediate dashboard notification + incident escalation |
 
+> 📄 **Full write-up:** This correlated detection was escalated and documented end-to-end in [`incident-reports/IR-001-multi-stage-attack-chain.md`](incident-reports/IR-001-multi-stage-attack-chain.md) — including timeline, evidence, root cause, containment steps, and lessons learned.
+
 ---
 
 ## 🗺️ MITRE ATT&CK Navigator Heatmap
@@ -282,6 +287,16 @@ Visual heatmap of all techniques simulated and detected in this lab, generated w
 ![MITRE ATT&CK Heatmap](docs/assets/mitre_coverage_2.svg)
 
 > 🔗 **Interactive Layer:** You can inspect the full JSON layer file in [`rules/att&ck_layer.json`](rules/att&ck_layer.json).
+
+---
+
+## 📄 Incident Reports
+
+| Report | Technique(s) | Severity | Summary |
+|---|---|---|---|
+| [IR-001 — Multi-Stage Attack Chain](incident-reports/IR-001-multi-stage-attack-chain.md) | T1059.001, T1003.001, T1136.001, T1560.001, T1567 | Critical | Full kill chain from initial PowerShell execution through credential theft, persistence, data staging, and exfiltration — detected end-to-end via the multi-stage correlation search above. |
+
+Each report follows a consistent structure: Executive Summary, Timeline, Evidence, Investigation, Root Cause, Containment & Remediation, Lessons Learned, and MITRE ATT&CK Mapping. 
 
 ---
 
@@ -307,10 +322,10 @@ Visual heatmap of all techniques simulated and detected in this lab, generated w
 - [x] Build a correlation rule that fires when multiple attack-chain stages occur on the same host in a short window
 - [x] Generate a MITRE ATT&CK Navigator heatmap of techniques covered
 - [x] Capture real screenshots of alerts and detections
+- [x] Write an incident report from real alert data (timeline, root cause, containment, lessons learned)
 - [ ] Simulate additional MITRE ATT&CK techniques (lateral movement, defense evasion, privilege escalation)
 - [ ] Write 5–10 custom detection rules covering multiple tactics
 - [ ] Build a Splunk dashboard for alert overview / MITRE coverage
-- [ ] Write 2–3 incident reports from real alert data (timeline, root cause, containment, lessons learned)
 - [ ] Add a dedicated attacker machine (Kali) to the lab network for realistic network-based attacks
 
 ---

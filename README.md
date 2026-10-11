@@ -16,7 +16,7 @@
 | **Endpoint Telemetry** | Sysmon 15.x |
 | **Framework** | MITRE ATT&CK |
 | **Virtualization** | Oracle VirtualBox (isolated host-only network) |
-| **Status** | ✅ Finished — see [Roadmap](#-roadmap) |
+| **Status** | ✅ Finished — see [Roadmap](#roadmap) |
 
 ---
 

@@ -313,7 +313,7 @@ Each report follows a consistent structure: Executive Summary, Timeline, Evidenc
 
 ---
 
-## 🗺️ Roadmap
+## <a id="roadmap"></a>🗺️ Roadmap
 
 - [x] Simulate a credential access technique
 - [x] Simulate a persistence technique 

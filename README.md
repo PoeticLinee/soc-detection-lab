@@ -294,7 +294,7 @@ Visual heatmap of all techniques simulated and detected in this lab, generated w
 
 | Report | Technique(s) | Severity | Summary |
 |---|---|---|---|
-| [IR-001 — Multi-Stage Attack Chain](incident-reports/IR-001-multi-stage-attack-chain.md) | T1059.001, T1003.001, T1136.001, T1560.001, T1567 | Critical | Full kill chain from initial PowerShell execution through credential theft, persistence, data staging, and exfiltration — detected end-to-end via the multi-stage correlation search above. |
+| [IR-001 — Multi-Stage Attack Chain](incident_reports/IR-001-multi-stage-attack-chain.md) | T1059.001, T1003.001, T1136.001, T1560.001, T1567 | Critical | Full kill chain from initial PowerShell execution through credential theft, persistence, data staging, and exfiltration — detected end-to-end via the multi-stage correlation search above. |
 
 Each report follows a consistent structure: Executive Summary, Timeline, Evidence, Investigation, Root Cause, Containment & Remediation, Lessons Learned, and MITRE ATT&CK Mapping. 
 

@@ -51,8 +51,9 @@ graph TD
 ```
 soc-detection-lab/
 ├── README.md
-├── docs/           # notes, lessons learned, findings
-├── rules/          # SPL detection rules / Sigma rules
+├── docs/
+│   └── assets/     # screenshots & MITRE Navigator heatmap (evidence)
+├── rules/          # SPL detection rules / Sigma rules / ATT&CK layer JSON
 ├── samples/        # sample logs, sample malicious command lines
 └── scripts/        # setup / config scripts (inputs.conf, sysmonconfig.xml, etc.)
 ```
@@ -70,11 +71,14 @@ soc-detection-lab/
 - ✅ **Phase 3 — Telemetry Ingestion**
   Deployed Splunk Universal Forwarder, configured `inputs.conf` to forward Application/Security/System/Sysmon logs. Validated pipeline end-to-end in Splunk (`index=main`).
 
-- 🔄 **Phase 4 — Threat Simulation** *(in progress — 5 techniques simulated so far)*
+- ✅ **Phase 4 — Threat Simulation**
+  5 MITRE ATT&CK techniques simulated, forming a full attack chain (Execution → Credential Access → Persistence → Collection → Exfiltration).
 
-- 🔄 **Phase 5 — Detection Engineering** *(in progress — 5 custom alerts + 1 multi-stage correlation search so far)*
+- ✅ **Phase 5 — Detection Engineering**
+  5 custom SPL alerts + 1 multi-stage correlation search + MITRE ATT&CK Navigator heatmap.
 
-- ⏳ **Phase 6 — Dashboards & Screenshots** *(planned)*
+- ✅ **Phase 6 — Dashboards & Screenshots**
+  Real evidence captured for every detection: live Splunk searches, alert configuration, and correlation search results — see inline screenshots below.
 
 - ⏳ **Phase 7 — Incident Reports** *(planned)*
 
@@ -146,6 +150,16 @@ index=main EventCode=1 Image="*powershell.exe" (CommandLine="*-ExecutionPolicy B
 | table _time ComputerName User Image CommandLine ParentCommandLine
 ```
 
+![PowerShell execution detected in Splunk](docs/assets/splunk-detection.png)
+*Live Splunk search confirming the obfuscated PowerShell invocation was captured.*
+
+**Alert configuration — Suspicious Obfuscated PowerShell Execution (T1059.001):**
+
+![Splunk alert configuration for T1059.001](docs/assets/splunk-alert.png)
+*Real-time alert, triggers when Number of Results > 0 within 1 minute.*
+
+---
+
 **Threat hunting query — LSASS credential dumping (SPL):**
 
 ```spl
@@ -161,6 +175,11 @@ index=main source="WinEventLog:Microsoft-Windows-Sysmon/Operational" lsass (Even
 | sort _time
 ```
 
+![LSASS credential dumping detected in Splunk](docs/assets/lsass-detecion.png)
+*8 events captured, including the `xordump` and `rdrleakdiag` evasion tools accessing `lsass.exe`.*
+
+---
+
 **Threat hunting query — local account creation (SPL):**
 
 ```spl
@@ -175,6 +194,11 @@ index=main source="*Sysmon*" EventCode=1 (CommandLine="*net user*" OR CommandLin
 | table _time host EventCode Image CommandLine User
 ```
 
+![Local account creation and admin group addition detected in Splunk](docs/assets/net-user-add.png)
+*Both the `net user /add` account creation and the follow-up `net localgroup administrators ... /add` privilege escalation captured.*
+
+---
+
 **Threat hunting query — archive utility usage for data staging (SPL):**
 
 ```spl
@@ -182,12 +206,22 @@ index=main sourcetype="WinEventLog:Microsoft-Windows-Sysmon/Operational" EventCo
 | table _time, Image, CommandLine
 ```
 
+![Archive utility usage detected in Splunk](docs/assets/data-archiving-detection.png)
+*13 events captured across multiple archive utilities (7-Zip, WinRAR, WinZip, makecab) used to stage data for exfiltration.*
+
+---
+
 **Threat hunting query — exfiltration via web upload (SPL):**
 
 ```spl
 index=main source="WinEventLog:Microsoft-Windows-Sysmon/Operational" (EventCode=1 OR EventCode=3) (Image="*curl.exe" OR Image="*powershell.exe")
 | table _time, host, EventCode, Image, CommandLine, DestinationIp, DestinationPort
 ```
+
+![Exfiltration via curl.exe detected in Splunk](docs/assets/exfiltration-data.png)
+*`curl.exe` uploading `hosts` to `reqres.in/api/users`, captured alongside the outbound network connection event (EventCode 3).*
+
+---
 
 | Rule | Technique | Trigger | Severity | Action |
 |---|---|---|---|---|
@@ -229,6 +263,12 @@ match(Image, "(?i)curl\.exe|powershell\.exe") AND match(CommandLine, "(?i)reqres
 | table host,User, stages_count, stages_detected, attack_duration_sec, first_seen, last_seen, executed_commands
 ```
 
+![Multi-stage correlation search query in Splunk](docs/assets/multi_stage_attack_part1.png)
+*The correlation search tagging each event with its corresponding attack-chain stage.*
+
+![Multi-stage correlation search results showing all 5 stages on one host](docs/assets/multi_stage_attack_part2.png)
+*Result: `Windows10-Victim` flagged with all 5 attack stages detected end-to-end — Execution, Credential Access, Persistence, Collection, and Exfiltration — proving the full kill chain was captured and correlated in a single query.*
+
 | Rule | Technique(s) Covered | Trigger | Severity | Action |
 |---|---|---|---|---|
 | Multi-Stage Attack Chain Detected | T1059.001, T1003.001, T1136.001, T1560.001, T1567 | `stages_count >= 3` for the same host/user | Critical | Immediate dashboard notification + incident escalation |
@@ -265,11 +305,11 @@ Visual heatmap of all techniques simulated and detected in this lab, generated w
 - [x] Simulate a collection technique (T1560.001)
 - [x] Simulate an exfiltration technique (T1567) — completes a full attack chain
 - [x] Build a correlation rule that fires when multiple attack-chain stages occur on the same host in a short window
+- [x] Generate a MITRE ATT&CK Navigator heatmap of techniques covered
+- [x] Capture real screenshots of alerts and detections
 - [ ] Simulate additional MITRE ATT&CK techniques (lateral movement, defense evasion, privilege escalation)
 - [ ] Write 5–10 custom detection rules covering multiple tactics
-- [ ] Generate a MITRE ATT&CK Navigator heatmap of techniques covered
 - [ ] Build a Splunk dashboard for alert overview / MITRE coverage
-- [ ] Capture real screenshots of alerts and dashboards
 - [ ] Write 2–3 incident reports from real alert data (timeline, root cause, containment, lessons learned)
 - [ ] Add a dedicated attacker machine (Kali) to the lab network for realistic network-based attacks
 

@@ -16,7 +16,7 @@
 | **Endpoint Telemetry** | Sysmon 15.x |
 | **Framework** | MITRE ATT&CK |
 | **Virtualization** | Oracle VirtualBox (isolated host-only network) |
-| **Status** | 🚧 Actively in progress — see [Roadmap](#-roadmap) |
+| **Status** | ✅ Finished — see [Roadmap](#-roadmap) |
 
 ---
 
@@ -315,18 +315,14 @@ Each report follows a consistent structure: Executive Summary, Timeline, Evidenc
 
 ## 🗺️ Roadmap
 
-- [x] Simulate a credential access technique (T1003.001)
-- [x] Simulate a persistence technique (T1136.001)
-- [x] Simulate a collection technique (T1560.001)
-- [x] Simulate an exfiltration technique (T1567) — completes a full attack chain
+- [x] Simulate a credential access technique
+- [x] Simulate a persistence technique 
+- [x] Simulate a collection technique 
+- [x] Simulate an exfiltration technique  — completes a full attack chain
 - [x] Build a correlation rule that fires when multiple attack-chain stages occur on the same host in a short window
 - [x] Generate a MITRE ATT&CK Navigator heatmap of techniques covered
 - [x] Capture real screenshots of alerts and detections
 - [x] Write an incident report from real alert data (timeline, root cause, containment, lessons learned)
-- [ ] Simulate additional MITRE ATT&CK techniques (lateral movement, defense evasion, privilege escalation)
-- [ ] Write 5–10 custom detection rules covering multiple tactics
-- [ ] Build a Splunk dashboard for alert overview / MITRE coverage
-- [ ] Add a dedicated attacker machine (Kali) to the lab network for realistic network-based attacks
 
 ---
 

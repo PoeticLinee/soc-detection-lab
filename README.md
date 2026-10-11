@@ -225,7 +225,7 @@ index=main source="WinEventLog:Microsoft-Windows-Sysmon/Operational" (EventCode=
 
 | Rule | Technique | Trigger | Severity | Action |
 |---|---|---|---|---|
-| Suspicious Obfuscated PowerShell Execution | T1059.001 | `Number of Results > 0` | High / Critical | Dashboard notification + event tagging |
+| Suspicious Obfuscated PowerShell Execution | T1059.001 | `Number of Results > 0` | High  | Dashboard notification + event tagging |
 | Suspicious LSASS Memory Access | T1003.001 | `Number of Results > 0` | Critical | Dashboard notification + event tagging |
 | Suspicious Local Account / Group Manipulation | T1136.001 | `Number of Results > 0` | High | Dashboard notification + event tagging |
 | Suspicious Archive Utility Usage (Data Staging) | T1560.001 | `Number of Results > 0` | Medium | Dashboard notification + event tagging |
@@ -279,7 +279,7 @@ match(Image, "(?i)curl\.exe|powershell\.exe") AND match(CommandLine, "(?i)reqres
 
 Visual heatmap of all techniques simulated and detected in this lab, generated with the [MITRE ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/)
 
-![MITRE ATT&CK Heatmap](docs/assets/mitre_coverage_1.svg)
+![MITRE ATT&CK Heatmap](docs/assets/mitre_coverage_2.svg)
 
 > 🔗 **Interactive Layer:** You can inspect the full JSON layer file in [`rules/att&ck_layer.json`](rules/att&ck_layer.json).
 

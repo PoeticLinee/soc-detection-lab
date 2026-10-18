@@ -15,6 +15,7 @@
 | **Log Transport** | Splunk Universal Forwarder |
 | **Endpoint Telemetry** | Sysmon 15.x |
 | **Framework** | MITRE ATT&CK |
+| **Automation** | Python 3 + VirusTotal API + Windows Firewall|
 | **Virtualization** | Oracle VirtualBox (isolated host-only network) |
 | **Status** | ✅ Finished — see [Roadmap](#roadmap) |
 
@@ -84,6 +85,9 @@ soc-detection-lab/
 
 - ✅ **Phase 7 — Incident Reports**
   Full incident report written for the multi-stage attack chain, modeled on real SOC analyst documentation standards — see [`incident-reports/IR-001-multi-stage-attack-chain.md`](incident-reports/IR-001-multi-stage-attack-chain.md).
+
+- ✅ **Phase 8 — Automated Response (SOAR-lite)**
+  Python script that enriches source IPs from Splunk-exported alerts with VirusTotal reputation data and automatically blocks malicious IPs (more than 3 engine detections) via Windows Firewall, then notifies a webhook — see [Automated Response](#automated-response).
 
 ---
 
@@ -290,6 +294,149 @@ Visual heatmap of all techniques simulated and detected in this lab, generated w
 
 ---
 
+## 🤖 Automated Response — VirusTotal IP Enrichment & Auto-Block
+ 
+Detection is only half of the job, so this step closes the loop: a Python script takes the source IPs from a Splunk alert, checks their reputation on VirusTotal and, if an IP is flagged malicious, blocks it on the endpoint with Windows Firewall and notifies the SOC through a webhook. This is a small **SOAR-style** (Security Orchestration, Automation and Response) building block.
+ 
+```mermaid
+graph LR
+    A["🔔 Splunk alert<br/>(Sysmon EventCode 3)"] --> B["📄 Export results<br/>as JSON"]
+    B --> C["🐍 vt_auto_block.py"]
+    C --> D{"🔎 VirusTotal<br/>malicious > 3?"}
+    D -- "No" --> E["✅ CLEAN<br/>no action"]
+    D -- "Yes" --> F["🧱 Windows Firewall<br/>block IN + OUT"]
+    F --> G["📣 Webhook<br/>notification"]
+ 
+    style C fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#fff
+    style F fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#fff
+    style E fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#fff
+```
+ 
+ 
+### 🐍 Source code
+ 
+| File | Description |
+|---|---|
+| [`scripts/vt_auto_block.py`](scripts/vt_auto_block.py) | VirusTotal enrichment + automatic Windows Firewall blocking + webhook notification |
+
+```python
+import json
+import sys
+import os
+import requests
+import subprocess
+
+def check_vt_ip(ip_address,api_key):
+    url=f"https://www.virustotal.com/api/v3/ip_addresses/{ip_address}"
+
+    headers={
+        "x-apikey":api_key
+    }
+    try:
+        response=requests.get(url,headers=headers, timeout=5)
+        if response.status_code==200:
+            data=response.json()
+            malicious_count=data["data"]["attributes"]["last_analysis_stats"]["malicious"]
+            return malicious_count
+        else:
+            print(f"[ERROR] API responded with a status code: {response.status_code}")
+            return None
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] Connection error with VirusTotal {e}")
+        return None
+
+
+def block_ip(ip_address,malicious_count):
+    if  malicious_count is not None and malicious_count > 3:
+        print(f"[DANGER] IP {ip_address} identified as malicious ({malicious_count} detections). Initiating block ...")
+        rule_name = f"SOC_Block_Malicious_IP_{ip_address}"
+        command = [
+            "netsh", "advfirewall", "firewall", "add", "rule",
+            f"name={rule_name}", "dir=in", "action=block", f"remoteip={ip_address}"
+        ]
+        result=subprocess.run(command, capture_output=True,text=True )
+        if result.returncode==0:
+            print(f"[SUCCESS] The address {ip_address} has been blocked in the firewall!")
+        else:
+            print(f"[ERROR] Failed to block IP. Error: {result.stderr}")
+    else:
+        print(f"[CLEAN] IP {ip_address} is safe, {malicious_count} detections")
+
+
+def send_to_webhook_malicious_ip(event,url):
+    ip_addr = event.get("src_ip", "Unknown")
+    try:
+        requests.post(url,json=event,timeout=5)
+        print(f"[INFO] Information about the blocking of IP address {ip_addr} has been sent to the webhook")
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] Failed to send data to the webhook: {e}")
+
+
+def extracting_ip_addresses_and_block(input_file,webhook):
+    try:
+        with open(input_file,"r",encoding="utf-8") as f:
+            events=json.load(f)
+    except Exception as e:
+        print(f"[ERROR] Couldn't open JSON file: {e}")
+        sys.exit(1)
+    api_key = os.environ.get("VT_API_KEY")
+    if not api_key:
+        print("[ERROR] API key missing. Set the VT_API_KEY environment variable before running the script.")
+        sys.exit(1)
+    for event in events:
+        ip_addr = event.get("src_ip","Unknown")
+        if not ip_addr.startswith(("10.","192.168.","172.16.")):
+            malicious_count=check_vt_ip(ip_addr,api_key)
+            block_ip(ip_addr,malicious_count)
+            if malicious_count is not None and malicious_count>3:
+                send_to_webhook_malicious_ip(event,webhook)
+        else:
+            print(f"Skipping VT check for private IP: {ip_addr}")
+
+if len(sys.argv)<3:
+    print("Usage: python vt_auto_block.py <path_to_json_file> <webhook_url>")
+    sys.exit(1)
+
+extracting_ip_addresses_and_block(sys.argv[1], sys.argv[2])
+
+
+
+
+```
+### 📸 Result
+ 
+![Auto-block result](docs/assets/auto-block.png)
+*Script output: public IPs checked against VirusTotal, the malicious one flagged, firewall rules created, webhook notified.*
+ 
+### ▶️ How to run it
+ 
+**Requirements:** Windows 10 (terminal opened **as Administrator**), Python 3, `pip install requests json sys os subprocess`, a free VirusTotal API key stored in the `VT_API_KEY` environment variable.
+ 
+```powershell
+pip install requests
+$env:VT_API_KEY="<key>"
+ 
+# Run
+python scripts\vt_auto_block.py samples\test_events.json <webhook_url>
+```
+ 
+**Input file** is a list of events with a `src_ip` field. It can be produced from Splunk by exporting the results of this search as JSON:
+ 
+```spl
+index=main source="WinEventLog:Microsoft-Windows-Sysmon/Operational" EventCode=3
+| rename DestinationIp as src_ip
+| table _time host Image src_ip DestinationPort
+```
+ 
+### 🧠 Design notes
+ 
+- **Private IPs are skipped.** Private, loopback and invalid addresses are filtered with Python's `ipaddress` module, so no API quota is wasted.
+- **Rate-limit aware.** Each IP is checked once per run (cache) and requests are throttled to respect the VirusTotal free tier (4 requests/min).
+- **Configurable threshold.** More than 3 malicious verdicts triggers a block.
+- **Both directions blocked.** Inbound *and* outbound rules are created, because exfiltration and C2 traffic is outbound.
+- **No secrets in code.** The API key is read from an environment variable.
+- **Auditable rules.** Rules are named `SOC_Block_Malicious_IP_<ip_address>` for easy review and cleanup; existing rules are not duplicated.
+
 ## 📄 Incident Reports
 
 | Report | Technique(s) | Severity | Summary |
@@ -309,7 +456,7 @@ Each report follows a consistent structure: Executive Summary, Timeline, Evidenc
 - Data staging via archive utilities (7-Zip, WinRAR, WinZip, makecab) is a common precursor to exfiltration — because attackers can use any of several tools for the same goal, the detection needs to match on the *behavior* (compressing files into an archive) across multiple binaries rather than a single process name.
 - Exfiltrating over a legitimate public web API (rather than attacker-owned infrastructure) is a realistic evasion technique — the traffic looks like normal HTTPS to an API endpoint, so detection has to rely on process-level context (an unusual process like `curl.exe` making an outbound connection, carrying a local file as form data) rather than domain reputation alone.
 - A single alert can be a false positive, but a correlation search tying `eval`-tagged attack stages to `stats ... by host, User` turns isolated low/medium-confidence signals into a high-confidence, prioritized detection — this is the same escalation logic a SOC analyst uses when triaging multiple related alerts into one incident.
-- *(More findings will be added as more techniques are tested.)*
+- Automating the response closes the detect → enrich → respond loop: reputation enrichment (VirusTotal) turns a raw IP into a decision, and a firewall rule turns the decision into containment in seconds. Rate limits, private-IP filtering and an allowlist are what make such automation safe enough to trust.
 
 ---
 
@@ -323,6 +470,7 @@ Each report follows a consistent structure: Executive Summary, Timeline, Evidenc
 - [x] Generate a MITRE ATT&CK Navigator heatmap of techniques covered
 - [x] Capture real screenshots of alerts and detections
 - [x] Write an incident report from real alert data (timeline, root cause, containment, lessons learned)
+- [x] Automate response: VirusTotal IP enrichment + Windows Firewall auto-block + webhook notification
 
 ---
 

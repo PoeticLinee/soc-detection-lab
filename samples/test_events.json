@@ -1,0 +1,26 @@
+[
+    {
+        "host": "SEC-DESKTOP",
+        "event_id": "4740",
+        "src_ip": "10.0.0.50",
+        "user": "jkowalski"
+    },
+    {
+        "host": "DC-01",
+        "event_id": "4625",
+        "src_ip": "192.168.1.15",
+        "user": "administrator"
+    },
+    {
+        "host": "FILE-SRV",
+        "event_id": "4740",
+        "src_ip": "10.0.0.88",
+        "user": "anowak"
+    },
+    {
+        "host": "WEB-SRV",
+        "event_id": "4625",
+        "src_ip": "185.220.101.5",
+        "user": "root"
+    }
+]

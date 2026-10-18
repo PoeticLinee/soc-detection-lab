@@ -407,6 +407,7 @@ extracting_ip_addresses_and_block(sys.argv[1], sys.argv[2])
  
 ![Auto-block result](docs/assets/auto-block.png)
 *Script output: public IPs checked against VirusTotal, the malicious one flagged, firewall rules created, webhook notified.*
+![Auto-block result2](docs/assets/auto_block_webhook.png)
  
 ### ▶️ How to run it
  

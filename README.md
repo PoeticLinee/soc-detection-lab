@@ -294,7 +294,7 @@ Visual heatmap of all techniques simulated and detected in this lab, generated w
 
 ---
 
-## <a id="#automated-response"></a>🤖 Automated Response — VirusTotal IP Enrichment & Auto-Block
+## <a id="automated-response"></a>🤖 Automated Response — VirusTotal IP Enrichment & Auto-Block
  
 Detection is only half of the job, so this step closes the loop: a Python script takes the source IPs from a Splunk alert, checks their reputation on VirusTotal and, if an IP is flagged malicious, blocks it on the endpoint with Windows Firewall and notifies the SOC through a webhook. This is a small **SOAR-style** (Security Orchestration, Automation and Response) building block.
  

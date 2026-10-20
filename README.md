@@ -84,7 +84,7 @@ soc-detection-lab/
   Real evidence captured for every detection: live Splunk searches, alert configuration, and correlation search results — see inline screenshots below.
 
 - ✅ **Phase 7 — Incident Reports**
-  Full incident report written for the multi-stage attack chain, modeled on real SOC analyst documentation standards — see [`incident-reports/IR-001-multi-stage-attack-chain.md`](incident-reports/IR-001-multi-stage-attack-chain.md).
+  Full incident report written for the multi-stage attack chain, modeled on real SOC analyst documentation standards — see [`incident-reports/IR-001-multi-stage-attack-chain.md`](incident_reports/IR-001-multi-stage-attack-chain.md).
 
 - ✅ **Phase 8 — Automated Response (SOAR-lite)**
   Python script that enriches source IPs from Splunk-exported alerts with VirusTotal reputation data and automatically blocks malicious IPs (more than 3 engine detections) via Windows Firewall, then notifies a webhook — see [Automated Response](#automated-response).
@@ -294,7 +294,7 @@ Visual heatmap of all techniques simulated and detected in this lab, generated w
 
 ---
 
-## 🤖 Automated Response — VirusTotal IP Enrichment & Auto-Block
+## <a id="#automated-response"></a>🤖 Automated Response — VirusTotal IP Enrichment & Auto-Block
  
 Detection is only half of the job, so this step closes the loop: a Python script takes the source IPs from a Splunk alert, checks their reputation on VirusTotal and, if an IP is flagged malicious, blocks it on the endpoint with Windows Firewall and notifies the SOC through a webhook. This is a small **SOAR-style** (Security Orchestration, Automation and Response) building block.
  

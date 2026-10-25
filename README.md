@@ -304,7 +304,7 @@ graph LR
     B --> C["🐍 vt_auto_block.py"]
     C --> D{"🔎 VirusTotal<br/>malicious > 3?"}
     D -- "No" --> E["✅ CLEAN<br/>no action"]
-    D -- "Yes" --> F["🧱 Windows Firewall<br/>block IN + OUT"]
+    D -- "Yes" --> F["🧱 Windows Firewall<br/>block IN"]
     F --> G["📣 Webhook<br/>notification"]
  
     style C fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#fff
@@ -431,10 +431,9 @@ index=main source="WinEventLog:Microsoft-Windows-Sysmon/Operational" EventCode=3
  
 ### 🧠 Design notes
  
-- **Private IPs are skipped.** Private, loopback and invalid addresses are filtered with Python's `ipaddress` module, so no API quota is wasted.
-- **Rate-limit aware.** Each IP is checked once per run (cache) and requests are throttled to respect the VirusTotal free tier (4 requests/min).
+- **Private IPs are skipped.** Basic filtering prevents checking private IPv4 ranges (10.x.x.x, 192.168.x.x, 172.16.x.x) to save VirusTotal API quota.
 - **Configurable threshold.** More than 3 malicious verdicts triggers a block.
-- **Both directions blocked.** Inbound *and* outbound rules are created, because exfiltration and C2 traffic is outbound.
+- **Inbound Firewall enforcement.** Creates inbound block rules (`dir=in`) via `netsh` for malicious remote IPs.
 - **No secrets in code.** The API key is read from an environment variable.
 - **Auditable rules.** Rules are named `SOC_Block_Malicious_IP_<ip_address>` for easy review and cleanup; existing rules are not duplicated.
 

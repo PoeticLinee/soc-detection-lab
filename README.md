@@ -564,7 +564,9 @@ The exact command from the [Threat Simulation](#️-threat-simulation) section w
 - The built-in rule describes a *script executed from a suspicious location* (level 6) — a more generic signal than the Splunk rule, which targets the `-ExecutionPolicy Bypass` / `-WindowStyle Hidden` flags specifically.
 - The Sysmon configuration itself tags events with a `ruleName` field (`technique_id=T1059.001,technique_name=PowerShell`). That label comes from the Sysmon config, **not** from Wazuh — the mapping Wazuh assigns lives in the `rule.mitre.*` fields.
 - The alert appeared roughly a minute after the Sysmon event timestamp, so event time and alert time should be correlated with a small tolerance.
+
 <br>
+
 ### 🔐 Part 5 — Finding #2: LSASS Memory (T1003.001) — Gap, Then Custom Rules
  
 `Invoke-AtomicTest T1003.001` was executed (with `-GetPrereqs`). In this lab, **Wazuh's built-in ruleset did not raise an alert mapped to T1003.001** for this activity.
